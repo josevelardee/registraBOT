@@ -1,0 +1,6 @@
+0 Nada
+1 Tentacion
+2 Mentitas
+3 Platano
+4 Manzana
+5 Mano
