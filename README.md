@@ -3,7 +3,7 @@
 
 El siguiente codigo programado en python detecta objetos con una camara web empleando la libreria OpenCV y un modelo realizado en la plataforma [Teachable Machine](https://teachablemachine.withgoogle.com/). 
 
-# Modelo de Detección de Objetos 📊
+# Modelo de Detección de Objetos
 
 El modelo actual fue realizado en la plataforma [Teachable Machine](https://teachablemachine.withgoogle.com/) y exportado en formato Keras.h5. 
 
