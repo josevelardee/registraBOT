@@ -1,6 +1,6 @@
-0 Nada
-1 Tentacion
-2 Mentitas
-3 Platano
-4 Manzana
-5 Mano
+0 Nada, Nada
+1 Tentacion, Victoria
+2 Mentitas, Ambrosoli
+3 Platano de Seda, Granel
+4 Manzana Verde, Granel
+5 Mano, Mano

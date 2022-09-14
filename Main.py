@@ -2,18 +2,24 @@ from keras.models import load_model
 import time
 import numpy as np
 import cv2
-from labels import *
+import random
+import gspread
 
 # Cargamos el modelo descargado de teachablemachine
 model = load_model('keras/keras_model.h5',compile=False)
 
-def etiqutas_modelo():
-    labels_array = []
-    with open('keras/labels.txt') as labels:
-        for line in labels:
-            x=line.split()
-            labels_array.append(x[1])
-    labels.close()
+sa = gspread.service_account(filename="service_account.json")
+sh = sa.open("registraBOTdata")
+wks = sh.worksheet("data")
+
+labels_array = []
+with open('keras/labels.txt') as labels:
+    for line in labels:
+        x=line.split(", ")
+        producto=x[0].split(" ",1)[1]
+        marca=x[1].split("\n")[0]
+        labels_array.append([producto, marca])
+labels.close()
 
 def detectar_objeto_v1():
     data = np.ndarray(shape=(1, 224, 224, 3), dtype=np.float32)  
@@ -25,8 +31,11 @@ def detectar_objeto_v1():
         ret, frame = cap.read()
         # Transformamos el frame del video de BGR propio de OpenCV a RGB de la libreria PIL para utilizar el codigo de predicción
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        # Recortamos el frame en un cuadrado
-        frame = frame[0:1080, 430:1510]
+        h=frame.shape[0]
+        w=frame.shape[1]
+        h2=int((w-h)/2)
+        #recortamos imagen en un cuadrado
+        frame = frame[0:h, h2:h2+h]
         # Redimensionamos el frame para ver como lo lee el codigo 224x244
         size = (224, 224)
         frame = cv2.resize(frame, size, interpolation = cv2.INTER_AREA)
@@ -48,7 +57,7 @@ def detectar_objeto_v1():
         #print(producto)
         
         #validamos si se ha detectado 2 veces seguida el mismo producto y si es asi se rompe el loop
-        if (max_value > 0.95) & (producto != "Mano") & (producto != "Nada"):
+        if (max_value > 0.95) & (producto[0] != "Mano") & (producto[0] != "Nada"):
             #validar.append(producto)
             break
             #print(validar)
@@ -79,34 +88,62 @@ def detectar_objeto_v1():
     return producto
 
 def pesar():
-    peso=0.2
+    peso=random.randint(5, 15)/10
     return peso
 
 def precio(peso):
-    print('INTRODUCE EL PRECIO S-Kg\n')
-    precio = input()
-    precio_total=float(precio)*peso
-    return precio_total
+    while True:
+        try:
+            precio_unitario = float(input("Escribe el precio del Producto: \n"))
+        except ValueError:
+            print("Debes escribir un número.\n")
+            continue
 
-def terminar_venta():
+        if precio_unitario < 0:
+            print("Debes escribir un número positivo.\n")
+            continue
+        else:
+            precio_total=round(float(precio_unitario)*peso,2)
+            break
+    return precio_total, precio_unitario
+
+def next_available_row(worksheet):
+    str_list = list(filter(None, worksheet.col_values(1)))
+    return str(len(str_list)+1)
+
+def subir_data(producto, marca, peso, precio_unitario, precio_total, hora, fecha):
     print('PRESIONA ENTER PARA TERMINAR LA VENTA Y SUBIR LA DATA')
     while(1):
-        acction = input()
+        accion = input()
         if accion=="":
-            print("SUBIENDO DATOS\n")
-            print("...\n")
-            time.sleep(1)
+            lista_subir=[producto,marca,peso,precio_unitario,precio_total,hora,fecha]
+            next_row = next_available_row(wks)
+            for x in range(len(lista_subir)):
+                wks.update_cell(next_row,x+1,lista_subir[x])
             print("DATA SUBIDA Y VENTA TERMINADA\n")
             break
 
-etiqutas_modelo()
-while(1):
-    print('\n\nPRESIONA ENTER PARA DETECTAR UN NUEVO PRODUCTO')
-    accion = input()
-    if accion=="":
-        producto = detectar_objeto_v1()
-        peso_producto=pesar()
-        print("\nTU PRODUCTO ES: " + str(producto) + " Y PESA: "  + str(peso_producto)+ " Kilos\n")
-        #precio_total=precio(peso_producto)
-        #print("\nEL PRECIO TOTAL ES: S/" + str(precio_total)+"\n")
-        #terminar_venta()
+def main():
+    while(1):
+        print('\n\nPRESIONA ENTER PARA DETECTAR UN NUEVO PRODUCTO')
+        accion = input()
+        if accion=="":
+            [Producto, Marca] = (detectar_objeto_v1())
+            if Marca == "Granel":
+                Peso=pesar()
+                print("\nTu producto es: " + str(Producto) + " y pesa: "  + str(Peso)+ " Kilos\n")
+                Precio_total, Precio_unitario = precio(Peso)
+            else:
+                Peso="-"
+                print("\nTu producto es: " + str(Producto)+"\n")
+                Precio_total, Precio_unitario = precio(1)
+            
+            Hora=time.strftime("%X")
+            Fecha=time.strftime("%x")
+            print("\nEL PRECIO TOTAL ES: S/" + str(Precio_total)+"\n")
+            subir_data(Producto, Marca, str(Peso), Precio_unitario, Precio_total, Hora, Fecha)
+
+if __name__ == "__main__":
+    main()
+
+
